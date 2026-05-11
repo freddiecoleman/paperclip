@@ -1272,6 +1272,7 @@ function IssueChatUserMessage({
   const pending = custom.clientStatus === "pending";
   const queueTargetRunId = typeof custom.queueTargetRunId === "string" ? custom.queueTargetRunId : null;
   const [copied, setCopied] = useState(false);
+  const textContainerRef = useRef<HTMLDivElement>(null);
   const {
     isCurrentUser,
     authorName: resolvedAuthorName,
@@ -1335,7 +1336,7 @@ function IssueChatUserMessage({
             ) : null}
           </div>
         ) : null}
-        <div className="min-w-0 max-w-full space-y-3">
+        <div className="min-w-0 max-w-full space-y-3" ref={textContainerRef} data-testid="message-text-container">
           <IssueChatTextParts message={message} />
         </div>
       </div>
@@ -1370,7 +1371,7 @@ function IssueChatUserMessage({
             title="Copy message"
             aria-label="Copy message"
             onClick={() => {
-              const text = message.content
+              const text = textContainerRef.current?.innerText ?? message.content
                 .filter((p): p is { type: "text"; text: string } => p.type === "text")
                 .map((p) => p.text)
                 .join("\n\n");
@@ -1454,6 +1455,7 @@ function IssueChatAssistantMessage({
   const [folded, setFolded] = useState(isFoldable);
   const [prevFoldKey, setPrevFoldKey] = useState({ messageId: message.id, isFoldable });
   const [copied, setCopied] = useState(false);
+  const textContainerRef = useRef<HTMLDivElement>(null);
   const copyText = getThreadMessageCopyText(message);
 
   // Derive fold state synchronously during render (not in useEffect) so the
@@ -1531,7 +1533,7 @@ function IssueChatAssistantMessage({
 
           {!folded ? (
             <>
-              <div className="space-y-3">
+              <div className="space-y-3" ref={textContainerRef} data-testid="message-text-container">
                 <IssueChatAssistantParts message={message} hasCoT={hasCoT} />
                 {message.content.length === 0 && waitingText ? (
                   <div className="flex items-center gap-2.5 rounded-lg px-1 py-2">
@@ -1566,7 +1568,7 @@ function IssueChatAssistantMessage({
                   title="Copy message"
                   aria-label="Copy message"
                   onClick={() => {
-                    void navigator.clipboard.writeText(copyText).then(() => {
+                    void navigator.clipboard.writeText(textContainerRef.current?.innerText ?? copyText).then(() => {
                       setCopied(true);
                       setTimeout(() => setCopied(false), 2000);
                     });
@@ -1610,7 +1612,7 @@ function IssueChatAssistantMessage({
                   <DropdownMenuContent align="end">
                     <DropdownMenuItem
                       onClick={() => {
-                        void navigator.clipboard.writeText(copyText);
+                        void navigator.clipboard.writeText(textContainerRef.current?.innerText ?? copyText);
                       }}
                     >
                       <Copy className="mr-2 h-3.5 w-3.5" />

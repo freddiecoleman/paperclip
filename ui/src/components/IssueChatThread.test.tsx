@@ -2642,6 +2642,139 @@ describe("IssueChatThread", () => {
     })).toBe(false);
   });
 
+  it("copies rendered DOM text (innerText) for user messages, not the raw markdown source", async () => {
+    const writeTextMock = vi.fn().mockResolvedValue(undefined);
+    Object.defineProperty(navigator, "clipboard", {
+      value: { writeText: writeTextMock },
+      writable: true,
+      configurable: true,
+    });
+
+    const root = createRoot(container);
+    act(() => {
+      root.render(
+        <MemoryRouter>
+          <IssueChatThread
+            comments={[{
+              id: "comment-1",
+              companyId: "company-1",
+              issueId: "issue-1",
+              authorType: "user",
+              authorAgentId: null,
+              authorUserId: "user-board",
+              body: "Use TEST\\_VALUE syntax",
+              presentation: null,
+              metadata: null,
+              createdAt: new Date("2026-04-01T10:00:00.000Z"),
+              updatedAt: new Date("2026-04-01T10:00:00.000Z"),
+            }]}
+            linkedRuns={[]}
+            timelineEvents={[]}
+            liveRuns={[]}
+            currentUserId="user-board"
+            onAdd={async () => {}}
+            showComposer={false}
+            showJumpToLatest={false}
+            enableLiveTranscriptPolling={false}
+          />
+        </MemoryRouter>,
+      );
+    });
+
+    // jsdom does not implement innerText, so define it on the element to simulate
+    // what the real markdown renderer produces: \_ renders as _ (backslash stripped).
+    const textContainer = container.querySelector('[data-testid="message-text-container"]') as HTMLElement | null;
+    expect(textContainer).not.toBeNull();
+    Object.defineProperty(textContainer, "innerText", {
+      get: () => "Use TEST_VALUE syntax",
+      configurable: true,
+    });
+
+    const copyButton = Array.from(container.querySelectorAll("button")).find(
+      (button) => button.getAttribute("aria-label") === "Copy message",
+    ) as HTMLButtonElement | undefined;
+    expect(copyButton).toBeDefined();
+
+    act(() => {
+      copyButton?.click();
+    });
+
+    expect(writeTextMock).toHaveBeenCalledTimes(1);
+    // innerText gives the rendered text — no backslash before the underscore
+    expect(writeTextMock).toHaveBeenCalledWith("Use TEST_VALUE syntax");
+
+    act(() => {
+      root.unmount();
+    });
+  });
+
+  it("copies rendered DOM text (innerText) for assistant messages, not the raw markdown source", async () => {
+    const writeTextMock = vi.fn().mockResolvedValue(undefined);
+    Object.defineProperty(navigator, "clipboard", {
+      value: { writeText: writeTextMock },
+      writable: true,
+      configurable: true,
+    });
+
+    const root = createRoot(container);
+    act(() => {
+      root.render(
+        <MemoryRouter>
+          <IssueChatThread
+            comments={[{
+              id: "comment-1",
+              companyId: "company-1",
+              issueId: "issue-1",
+              authorType: "agent",
+              authorAgentId: "agent-1",
+              authorUserId: null,
+              body: "Use TEST\\_VALUE syntax",
+              presentation: null,
+              metadata: null,
+              createdAt: new Date("2026-04-01T10:00:00.000Z"),
+              updatedAt: new Date("2026-04-01T10:00:00.000Z"),
+            }]}
+            linkedRuns={[]}
+            timelineEvents={[]}
+            liveRuns={[]}
+            agentMap={issueChatLongThreadAgentMap}
+            currentUserId="user-board"
+            onAdd={async () => {}}
+            showComposer={false}
+            showJumpToLatest={false}
+            enableLiveTranscriptPolling={false}
+          />
+        </MemoryRouter>,
+      );
+    });
+
+    // jsdom does not implement innerText, so define it on the element to simulate
+    // what the real markdown renderer produces: \_ renders as _ (backslash stripped).
+    const textContainer = container.querySelector('[data-testid="message-text-container"]') as HTMLElement | null;
+    expect(textContainer).not.toBeNull();
+    Object.defineProperty(textContainer, "innerText", {
+      get: () => "Use TEST_VALUE syntax",
+      configurable: true,
+    });
+
+    const copyButton = Array.from(container.querySelectorAll("button")).find(
+      (button) => button.getAttribute("aria-label") === "Copy message",
+    ) as HTMLButtonElement | undefined;
+    expect(copyButton).toBeDefined();
+
+    act(() => {
+      copyButton?.click();
+    });
+
+    expect(writeTextMock).toHaveBeenCalledTimes(1);
+    // innerText gives the rendered text — no backslash before the underscore
+    expect(writeTextMock).toHaveBeenCalledWith("Use TEST_VALUE syntax");
+
+    act(() => {
+      root.unmount();
+    });
+  });
+
   it("uses company profile data to distinguish the current user from other humans", () => {
     const userProfileMap = new Map([
       ["user-1", { label: "Dotta", image: "/avatars/dotta.png" }],
